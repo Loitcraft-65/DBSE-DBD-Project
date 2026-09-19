@@ -1,39 +1,47 @@
+﻿# 💰 Common Wallet - Shared Expense Splitter
+
+[![Live Demo](https://img.shields.io/badge/Live%20Website-Click%20To%20Open-7c5cfc?style=for-the-badge&logo=google-chrome&logoColor=white)](https://loitcraft-65.github.io/DBSE-DBD-Project/)
+
+### 🌐 Live Accessible Website URL:
+👉 **[https://loitcraft-65.github.io/DBSE-DBD-Project/](https://loitcraft-65.github.io/DBSE-DBD-Project/)**
+
+---
 # ExpenseSplitter (Common Wallet) - Full Stack Application
 
 A collaborative expense splitting and shared wallet management application.
 
 ---
 
-## 📁 Project Structure
+## ðŸ“ Project Structure
 
 ```
 ExpenseSplitter/
-├── backend/                  # Spring Boot REST API (Java)
-│   ├── src/main/java/com/example/
-│   │   ├── config/           # CORS and security configurations
-│   │   ├── controller/       # AuthController, GroupController, ExpenseController
-│   │   ├── entity/           # UserAccount, Group (expense_groups), Expense
-│   │   ├── repository/       # Spring Data JPA repositories
-│   │   └── ExpensesplitterApplication.java
-│   ├── src/main/resources/   # application.properties (MySQL datasource)
-│   └── pom.xml               # Maven dependencies (Spring Boot, JPA, MySQL)
-│
-├── frontend/                 # React 19 + Vite Application
-│   ├── src/
-│   │   ├── App.jsx           # Main App, Dashboard, Login, Modals, Timeline
-│   │   ├── index.css         # Dark glassmorphic design system
-│   │   └── main.jsx          # React DOM root entry
-│   ├── index.html            # HTML5 template with Google Fonts (Space Grotesk, Inter)
-│   ├── package.json          # Node dependencies and scripts
-│   └── vite.config.js        # Vite + React plugin configuration
-│
-└── database/                 # Database scripts
-    └── schema.sql            # MySQL schema for tables & seed demo users
+â”œâ”€â”€ backend/                  # Spring Boot REST API (Java)
+â”‚   â”œâ”€â”€ src/main/java/com/example/
+â”‚   â”‚   â”œâ”€â”€ config/           # CORS and security configurations
+â”‚   â”‚   â”œâ”€â”€ controller/       # AuthController, GroupController, ExpenseController
+â”‚   â”‚   â”œâ”€â”€ entity/           # UserAccount, Group (expense_groups), Expense
+â”‚   â”‚   â”œâ”€â”€ repository/       # Spring Data JPA repositories
+â”‚   â”‚   â””â”€â”€ ExpensesplitterApplication.java
+â”‚   â”œâ”€â”€ src/main/resources/   # application.properties (MySQL datasource)
+â”‚   â””â”€â”€ pom.xml               # Maven dependencies (Spring Boot, JPA, MySQL)
+â”‚
+â”œâ”€â”€ frontend/                 # React 19 + Vite Application
+â”‚   â”œâ”€â”€ src/
+â”‚   â”‚   â”œâ”€â”€ App.jsx           # Main App, Dashboard, Login, Modals, Timeline
+â”‚   â”‚   â”œâ”€â”€ index.css         # Dark glassmorphic design system
+â”‚   â”‚   â””â”€â”€ main.jsx          # React DOM root entry
+â”‚   â”œâ”€â”€ index.html            # HTML5 template with Google Fonts (Space Grotesk, Inter)
+â”‚   â”œâ”€â”€ package.json          # Node dependencies and scripts
+â”‚   â””â”€â”€ vite.config.js        # Vite + React plugin configuration
+â”‚
+â””â”€â”€ database/                 # Database scripts
+    â””â”€â”€ schema.sql            # MySQL schema for tables & seed demo users
 ```
 
 ---
 
-## 📦 Required Modules Implemented
+## ðŸ“¦ Required Modules Implemented
 
 ### 1. User Account & Authentication Module (`/api/auth`)
 - **Login Endpoint**: `POST /api/auth/login` (validates `username` & `password`).
@@ -70,7 +78,7 @@ ExpenseSplitter/
 
 ---
 
-## 🚀 How to Run
+## ðŸš€ How to Run
 
 ### Step 1: Database Setup
 1. Open MySQL Command Line or MySQL Workbench.
