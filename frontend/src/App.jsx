@@ -1,34 +1,154 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 /* ─────────────────────────────────────────────────────────────
-   API CONFIG  – Spring Boot runs on 8080
+   API & DEMO STORAGE CONFIG
+   - When backend (localhost:8080) is running, calls real REST API.
+   - When hosted on GitHub Pages or offline, seamlessly runs full
+     interactive demo storage so the website works 100% online!
 ───────────────────────────────────────────────────────────── */
 const API = 'http://localhost:8080/api'
 
-async function api(path, options = {}) {
-  let res
+// Initial seed data for offline / GitHub Pages demo mode
+const INITIAL_DEMO_DATA = {
+  users: [
+    { userId: 1, name: 'Rapaka Rithwik', username: '2520030427', password: 'rithu', displayName: 'Rithwik' },
+    { userId: 2, name: 'Wallet Admin', username: 'admin', password: 'admin123', displayName: 'Admin' },
+    { userId: 3, name: 'Alice Sharma', username: 'alice', password: 'password123', displayName: 'Alice' },
+    { userId: 4, name: 'Bob Mehta', username: 'bob', password: 'password123', displayName: 'Bob' },
+    { userId: 5, name: 'Carol Singh', username: 'carol', password: 'password123', displayName: 'Carol' },
+  ],
+  groups: [
+    { groupId: 1, groupName: 'Trip to Goa', monthlyBudget: 25000, createdBy: 3, createdAt: '2026-09-19' },
+    { groupId: 2, groupName: 'Flat Mates', monthlyBudget: 15000, createdBy: 4, createdAt: '2026-09-19' },
+    { groupId: 3, groupName: 'Weekend Treks', monthlyBudget: 8000, createdBy: 3, createdAt: '2026-09-19' },
+  ],
+  expenses: [
+    { expenseId: 1, groupId: 1, paidBy: 3, description: 'Seaside Villa Stay', amount: 8400, category: 'Travel', expenseDate: '2026-09-18', splitType: 'equal' },
+    { expenseId: 2, groupId: 1, paidBy: 4, description: 'Beachside Dinner & Seafood', amount: 3250, category: 'Food', expenseDate: '2026-09-18', splitType: 'equal' },
+    { expenseId: 3, groupId: 1, paidBy: 5, description: 'Scuba Diving Passes', amount: 4500, category: 'Entertainment', expenseDate: '2026-09-19', splitType: 'equal' },
+    { expenseId: 4, groupId: 2, paidBy: 4, description: 'Monthly High-Speed WiFi', amount: 1199, category: 'Other', expenseDate: '2026-09-15', splitType: 'equal' },
+    { expenseId: 5, groupId: 2, paidBy: 3, description: 'Supermarket Groceries', amount: 3820, category: 'Food', expenseDate: '2026-09-17', splitType: 'equal' },
+  ],
+}
+
+function getDemoStore() {
   try {
-    res = await fetch(`${API}${path}`, {
-      headers: options.body ? { 'Content-Type': 'application/json' } : undefined,
-      ...options,
-    })
-  } catch {
-    throw new Error(
-      'Backend is not reachable at localhost:8080. Start the Spring Boot app first.'
-    )
+    const raw = localStorage.getItem('cw_demo_store')
+    if (raw) return JSON.parse(raw)
+  } catch {}
+  localStorage.setItem('cw_demo_store', JSON.stringify(INITIAL_DEMO_DATA))
+  return INITIAL_DEMO_DATA
+}
+
+function saveDemoStore(store) {
+  localStorage.setItem('cw_demo_store', JSON.stringify(store))
+}
+
+let isBackendAvailable = null // null: untested, true: live, false: demo mode
+
+async function api(path, options = {}) {
+  // Check if we are running on GitHub Pages (github.io) -> use interactive demo mode directly
+  const isGitHubPages = window.location.hostname.includes('github.io')
+
+  if (!isGitHubPages && isBackendAvailable !== false) {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 2500)
+      const res = await fetch(`${API}${path}`, {
+        headers: options.body ? { 'Content-Type': 'application/json' } : undefined,
+        signal: controller.signal,
+        ...options,
+      })
+      clearTimeout(timeoutId)
+
+      const text = await res.text()
+      let data = null
+      if (text) {
+        try { data = JSON.parse(text) } catch { data = { message: text } }
+      }
+
+      if (!res.ok) {
+        const detail = data?.message || data?.error || `HTTP ${res.status} error.`
+        throw new Error(detail)
+      }
+      isBackendAvailable = true
+      return data
+    } catch (err) {
+      if (err.name === 'AbortError' || err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        isBackendAvailable = false
+      } else {
+        throw err
+      }
+    }
   }
 
-  const text = await res.text()
-  let data = null
-  if (text) {
-    try { data = JSON.parse(text) } catch { data = { message: text } }
+  // ── In-Browser Interactive Demo Storage (GitHub Pages / Offline mode) ──
+  const store = getDemoStore()
+
+  // 1. Auth login
+  if (path === '/auth/login' && options.method === 'POST') {
+    const { username, password } = JSON.parse(options.body)
+    const user = store.users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password)
+    if (!user) throw new Error('Invalid username or password.')
+    return { success: true, userId: user.userId, username: user.username, displayName: user.displayName }
   }
 
-  if (!res.ok) {
-    const detail = data?.message || data?.error || `HTTP ${res.status} error.`
-    throw new Error(detail)
+  // 2. Groups
+  if (path === '/groups' && (!options.method || options.method === 'GET')) {
+    return store.groups
   }
-  return data
+  if (path === '/groups' && options.method === 'POST') {
+    const body = JSON.parse(options.body)
+    const newGroup = {
+      groupId: Date.now(),
+      groupName: body.groupName,
+      monthlyBudget: Number(body.monthlyBudget) || 10000,
+      createdBy: body.createdBy,
+      createdAt: new Date().toISOString().slice(0, 10),
+    }
+    store.groups.push(newGroup)
+    saveDemoStore(store)
+    return newGroup
+  }
+  if (path.startsWith('/groups/') && options.method === 'DELETE') {
+    const id = Number(path.replace('/groups/', ''))
+    store.groups = store.groups.filter(g => g.groupId !== id)
+    store.expenses = store.expenses.filter(e => e.groupId !== id)
+    saveDemoStore(store)
+    return { success: true }
+  }
+
+  // 3. Expenses
+  if (path.startsWith('/expenses/group/')) {
+    const gid = Number(path.replace('/expenses/group/', ''))
+    return store.expenses
+      .filter(e => e.groupId === gid)
+      .sort((a, b) => new Date(b.expenseDate) - new Date(a.expenseDate))
+  }
+  if (path === '/expenses' && options.method === 'POST') {
+    const body = JSON.parse(options.body)
+    const newExp = {
+      expenseId: Date.now(),
+      groupId: Number(body.groupId),
+      paidBy: Number(body.paidBy),
+      description: body.description,
+      amount: Number(body.amount),
+      category: body.category || 'Food',
+      expenseDate: body.expenseDate,
+      splitType: body.splitType || 'equal',
+    }
+    store.expenses.push(newExp)
+    saveDemoStore(store)
+    return newExp
+  }
+  if (path.startsWith('/expenses/') && options.method === 'DELETE') {
+    const id = Number(path.replace('/expenses/', ''))
+    store.expenses = store.expenses.filter(e => e.expenseId !== id)
+    saveDemoStore(store)
+    return { success: true }
+  }
+
+  return []
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -182,20 +302,18 @@ function Login({ onLogin }) {
 ═══════════════════════════════════════════════════════════════ */
 function Dashboard({ user, onLogout }) {
   const [groups,        setGroups]        = useState([])
-  const [selectedGroup, setSelectedGroup] = useState(null) // groupId
+  const [selectedGroup, setSelectedGroup] = useState(null)
   const [expenses,      setExpenses]      = useState([])
   const [error,         setError]         = useState('')
   const [showExpense,   setShowExpense]   = useState(false)
   const [showGroup,     setShowGroup]     = useState(false)
   const [toast,         setToast]         = useState(null)
 
-  /* ── helpers ── */
   function showToast(msg, type = 'success') {
     setToast({ msg, type })
     setTimeout(() => setToast(null), 3000)
   }
 
-  /* ── Load groups on mount ── */
   const loadGroups = useCallback(async (selectId) => {
     const data = await api('/groups')
     setGroups(data)
@@ -205,7 +323,6 @@ function Dashboard({ user, onLogout }) {
 
   useEffect(() => { loadGroups().catch(e => setError(e.message)) }, [loadGroups])
 
-  /* ── Load expenses when group changes ── */
   const loadExpenses = useCallback(async () => {
     if (!selectedGroup) { setExpenses([]); return }
     const data = await api(`/expenses/group/${selectedGroup}`)
@@ -214,22 +331,17 @@ function Dashboard({ user, onLogout }) {
 
   useEffect(() => { loadExpenses().catch(e => setError(e.message)) }, [loadExpenses])
 
-  /* ── Current group object ── */
   const group = useMemo(
     () => groups.find(g => g.groupId === selectedGroup) ?? null,
     [groups, selectedGroup]
   )
 
-  /* ── Budget maths ── */
   const budget    = group?.monthlyBudget ?? 0
   const total     = useMemo(() => expenses.reduce((s, e) => s + Number(e.amount), 0), [expenses])
   const remaining = Math.max(0, budget - total)
   const progress  = budget > 0 ? Math.min(100, (total / budget) * 100) : 0
+  const health    = budget > 0 ? Math.max(0, Math.round(100 - progress)) : 100
 
-  /* ── Health score (simple) ── */
-  const health = budget > 0 ? Math.max(0, Math.round(100 - progress)) : 100
-
-  /* ── Delete expense ── */
   async function deleteExpense(id) {
     try {
       await api(`/expenses/${id}`, { method: 'DELETE' })
@@ -240,7 +352,6 @@ function Dashboard({ user, onLogout }) {
     }
   }
 
-  /* ── Delete group ── */
   async function deleteGroup() {
     if (!group) return
     if (!window.confirm(`Delete "${group.groupName}"? All its expenses will also be removed.`)) return
@@ -253,14 +364,12 @@ function Dashboard({ user, onLogout }) {
     }
   }
 
-  /* ── Category breakdown ── */
   const catBreakdown = useMemo(() => {
     const m = {}
     expenses.forEach(e => { m[e.category || 'Other'] = (m[e.category || 'Other'] || 0) + Number(e.amount) })
     return Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 3)
   }, [expenses])
 
-  /* ── Member breakdown (by paidBy) ── */
   const memberBreakdown = useMemo(() => {
     const m = {}
     expenses.forEach(e => { m[e.paidBy] = (m[e.paidBy] || 0) + Number(e.amount) })
@@ -428,7 +537,7 @@ function Dashboard({ user, onLogout }) {
             )}
           </div>
 
-          {/* Rules / Categories */}
+          {/* Categories */}
           <div className="feature-card">
             <div className="feature-head">
               <div className="feature-icon">🏷️</div>
@@ -527,7 +636,7 @@ function Dashboard({ user, onLogout }) {
       </main>
 
       {/* ── Modals ── */}
-      {showExpense && selectedGroup > 0 && (
+      {showExpense && selectedGroup && (
         <ExpenseModal
           groupId={selectedGroup}
           userId={user.userId}
@@ -738,10 +847,9 @@ function GroupModal({ userId, onClose, onCreated }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   REUSABLE MODAL SHELL
+   MODAL SHELL
 ═══════════════════════════════════════════════════════════════ */
 function Modal({ title, eyebrow, onClose, children }) {
-  // Close on Escape key
   useEffect(() => {
     const handler = e => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
