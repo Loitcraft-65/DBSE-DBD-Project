@@ -1,0 +1,23 @@
+# Node dependencies & build artifacts
+**/node_modules/
+**/dist/
+**/.vite/
+frontend/dist/
+frontend/node_modules/
+
+# Java / Maven build artifacts
+**/target/
+backend/target/
+*.class
+
+# IDE & OS files
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Eclipse project files (keep or ignore)
+**/.settings/
