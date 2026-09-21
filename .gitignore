@@ -19,5 +19,7 @@ Thumbs.db
 *.suo
 *.user
 
-# Eclipse project files (keep or ignore)
+# Eclipse project files
+**/.classpath
+**/.project
 **/.settings/
